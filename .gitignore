@@ -1,0 +1,21 @@
+# Vim
+*.swp
+
+# IntelliJ
+*.iml
+.idea
+
+# Gradle
+.gradle
+local.properties
+
+# Java
+build/
+out/
+
+# Server
+saltyrtc-server-python/
+*.crt
+*.csr
+*.key
+*.jks

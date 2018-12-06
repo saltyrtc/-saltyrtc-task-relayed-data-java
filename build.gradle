@@ -1,0 +1,127 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+    }
+}
+
+plugins {
+    // Base
+    id 'java'
+
+    // Publishing on bintray
+    id 'maven'
+    id 'maven-publish'
+    id 'com.jfrog.bintray' version '1.7'
+}
+
+apply plugin: 'maven'
+
+def app_version = '0.1.0'
+
+targetCompatibility = '1.8'
+sourceCompatibility = '1.8'
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+    jcenter()
+    maven { url  "https://dl.bintray.com/terl/lazysodium-maven" }
+}
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+    // The production code uses the SLF4J logging API at compile time
+    compile 'org.slf4j:slf4j-api:1.7.25'
+
+    // Dependency: Msgpack serialization
+    compile group: 'org.json', name: 'json', version: '20180813'
+    compile 'org.msgpack:msgpack-core:0.8.+'
+    compile 'org.msgpack:jackson-dataformat-msgpack:0.8.+'
+
+    // Dependency: SaltyRTC Client
+    compile 'org.saltyrtc.client:saltyrtc-client:0.12.0'
+
+    // Test dependencies
+    testCompile 'org.slf4j:slf4j-simple:1.7.+'
+    testCompile 'junit:junit:4.12'
+    testCompile 'com.goterl.lazycode:lazysodium-java:3.3.0'
+    testCompile 'net.java.dev.jna:jna:5.0.0'
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed", "standardError"
+    }
+}
+
+// custom tasks for creating source/javadoc jars
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+// Turn off linting for javadoc
+tasks.withType(Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+// Add javadoc/source jar tasks as artifacts
+artifacts {
+    archives sourcesJar, javadocJar
+}
+
+publishing {
+    publications {
+        SaltyRTC(MavenPublication) {
+            from components.java
+            groupId 'org.saltyrtc.tasks.relayed-data'
+            artifactId 'saltyrtc-task-relayed-data'
+            version app_version
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}
+
+// Upload to Bintray
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['RelayedDataTask']
+    pkg {
+        repo = 'maven'
+        name = 'saltyrtc-task-relayed-data'
+        userOrg = 'saltyrtc'
+        desc = 'Java implementation of the SaltyRTC Relayed Data task.'
+        websiteUrl = 'http://saltyrtc.org/'
+        issueTrackerUrl = 'https://github.com/saltyrtc/saltyrtc-task-relayed-data-java/issues'
+        vcsUrl = 'https://github.com/saltyrtc/saltyrtc-task-relayed-data-java.git'
+        githubRepo = 'saltyrtc/saltyrtc-task-relayed-data-java'
+        publicDownloadNumbers = true
+        licenses = ['MIT', 'Apache-2.0']
+        labels = ['saltyrtc', 'data channels', 'signaling', 'secure']
+        version {
+            name = app_version
+            desc = 'SaltyRTC Relayed Data Java Task v${app_version}'
+            released = new Date()
+            vcsTag = 'v${app_version}'
+        }
+    }
+}
+
+// Upload to local Maven repo for testing
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: uri('/tmp/maven/'))
+            pom.version = app_version
+            pom.groupId = 'org.saltyrtc.tasks.relayed-data'
+            pom.artifactId = 'saltyrtc-task-relayed-data'
+        }
+    }
+}
